@@ -1,0 +1,6 @@
+rtl/custom_ip_pkg.sv
+rtl/async_fifo.sv
+rtl/custom_ip_formatter.sv
+rtl/custom_ip_deserializer.sv
+tb/tb_custom_ip_deserializer.sv
+tb/custom_ip_tb.sv

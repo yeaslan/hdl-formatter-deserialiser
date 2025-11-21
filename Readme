@@ -1,0 +1,31 @@
+Intro
+=====
+
+This project provides a two-IP HDL solution that meets the framing, command decode, and channel-packing requirements. The deliverables include:
+
+- `rtl/custom_ip_formatter.sv` — command decoder + serializer operating across 10 MHz and 75 MHz domains, enforcing 8-cycle gaps and 650-cycle frames while consuming FIFO data according to the opcode table.
+- `rtl/custom_ip_deserializer.sv` — complementary receive IP that reconstructs `C_even`/`C_odd` byte streams and generates a synthesized ~20 MHz clock via a phase accumulator.
+- `rtl/async_fifo.sv` — reusable dual-clock FIFO used for both command and payload crossings.
+- `rtl/custom_ip_pkg.sv` — shared typedefs, constants (e.g., TP pattern), and decoder helper functions.
+- `tb/custom_ip_tb.sv` — randomized, self-checking SystemVerilog testbench that hits every opcode, streams random FIFO words, validates multi-lane nibble serialization, and asserts the minimum inter-frame gap.
+
+Simulation Notes
+----------------
+
+1. Compile the package first, then the remaining RTL and the testbench. Example with `xvlog`:
+   ```
+   xvlog rtl/custom_ip_pkg.sv rtl/async_fifo.sv rtl/custom_ip_formatter.sv rtl/custom_ip_deserializer.sv tb/custom_ip_tb.sv
+   xelab custom_ip_tb
+   xsim work.custom_ip_tb
+   ```
+2. The formatter exposes `underflow_flag`. The testbench treats any assertion of this flag as a failure.
+3. Random stimulus is deterministic per simulator seed; override with `+ntb_random_seed` (Questa/Xcelium) or equivalent to explore more permutations.
+
+Key Design Assumptions
+----------------------
+
+- `CHANNEL_OFF` drives a constant `8'hFF` pattern to clearly distinguish from opcode `0x09` (`CHANNEL_ZERO`, 8'h00).
+- When only one channel is `CHANNEL_ON`, the formatter still consumes FIFO words but discards the unused byte. This keeps the FIFO alignment with the defined MSB/LSB packaging.
+- The deserializer’s ~20 MHz clock is produced by a fractional-N phase accumulator; replace with a PLL/DCM in hardware if low jitter is required.
+
+Scalable parameters (frame length, gap cycles, FIFO depths) to match silicon target. The testbench already constrains them via localparams so regression adjustments are straightforward.
